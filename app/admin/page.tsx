@@ -71,12 +71,21 @@ export default function AdminDashboard() {
               {user?.fullName} · {new Date().toLocaleDateString("es-MX", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Link href="/admin/conversations" className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-semibold hover:opacity-90 transition">
               💬 Conversaciones
             </Link>
             <Link href="/admin/tickets" className="px-4 py-2 rounded-xl bg-white/8 border border-white/10 text-sm hover:bg-white/12 transition">
               🎫 Tickets
+            </Link>
+            <Link href="/admin/reservations" className="px-4 py-2 rounded-xl bg-indigo-500/15 border border-indigo-500/25 text-sm text-indigo-300 hover:bg-indigo-500/20 transition">
+              📋 Reservas
+            </Link>
+            <Link href="/admin/rooms" className="px-4 py-2 rounded-xl bg-white/8 border border-white/10 text-sm hover:bg-white/12 transition">
+              🛏️ Habitaciones
+            </Link>
+            <Link href="/admin/fb/inventory" className="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-300 hover:bg-amber-500/15 transition">
+              📦 F&B
             </Link>
           </div>
         </div>
