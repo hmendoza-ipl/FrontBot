@@ -21,20 +21,32 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => setUser(getDemoUser()), []);
 
-  const nav =
-    user?.role === "guest"
-      ? [
-          { href: "/demo", label: "Inicio", icon: "🏠" },
-          { href: "/demo/chat", label: "Chat IA", icon: "💬" },
-          { href: "/demo/tickets", label: "Solicitudes", icon: "🎫" },
-          { href: "/demo/nearby", label: "Cerca de ti", icon: "📍" },
-          { href: "/demo/checkout", label: "Checkout Express", icon: "🚀" },
-        ]
-      : [
-          { href: "/admin", label: "Dashboard", icon: "📊" },
-          { href: "/admin/conversations", label: "Conversaciones", icon: "💬" },
-          { href: "/admin/tickets", label: "Tickets", icon: "🎫" },
-        ];
+  const guestNav = [
+    { href: "/demo", label: "Inicio", icon: "🏠" },
+    { href: "/demo/chat", label: "Chat IA", icon: "💬" },
+    { href: "/demo/tickets", label: "Solicitudes", icon: "🎫" },
+    { href: "/demo/nearby", label: "Cerca de ti", icon: "📍" },
+    { href: "/demo/checkout", label: "Checkout Express", icon: "🚀" },
+  ];
+
+  const adminNav = [
+    // Concierge IA
+    { href: "/admin", label: "Dashboard", icon: "📊", group: "ia" },
+    { href: "/admin/conversations", label: "Conversaciones", icon: "💬", group: "ia" },
+    { href: "/admin/tickets", label: "Tickets", icon: "🎫", group: "ia" },
+    // Hotel PMS
+    { href: "/admin/rooms", label: "Habitaciones", icon: "🛏️", group: "pms" },
+    { href: "/admin/reservations", label: "Reservas", icon: "📋", group: "pms" },
+    { href: "/admin/folio", label: "Folio", icon: "🧾", group: "pms" },
+    // F&B
+    { href: "/admin/fb/inventory", label: "Inventario", icon: "📦", group: "fb" },
+    { href: "/admin/fb/vendors", label: "Proveedores", icon: "🏭", group: "fb" },
+    { href: "/admin/fb/purchases", label: "Compras", icon: "🛒", group: "fb" },
+    // Billing
+    { href: "/admin/billing", label: "Facturación", icon: "💰", group: "billing" },
+  ];
+
+  const nav = user?.role === "guest" ? guestNav : adminNav;
 
   function logout() {
     clearDemoUser();
@@ -59,24 +71,67 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </Link>
 
           {/* Nav desktop */}
-          <nav className="hidden md:flex items-center gap-1">
-            {nav.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition-all ${
-                    isActive
-                      ? "bg-white/10 border border-white/15"
-                      : "text-white/60 hover:text-white hover:bg-white/6"
-                  }`}
-                >
-                  <span className="text-base">{item.icon}</span>
-                  {item.label}
-                </Link>
-              );
-            })}
+          <nav className="hidden md:flex items-center gap-1 flex-wrap">
+            {user?.role !== "guest" ? (
+              <>
+                {/* Group: IA */}
+                <div className="flex items-center gap-1 rounded-xl px-1 py-1" style={{ background: "rgba(56,189,248,0.05)", border: "1px solid rgba(56,189,248,0.1)" }}>
+                  {adminNav.filter(i => i.group === "ia").map((item) => (
+                    <Link key={item.href} href={item.href}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-all ${
+                        pathname === item.href ? "bg-white/10 border border-white/15" : "text-white/55 hover:text-white hover:bg-white/6"
+                      }`}>
+                      <span>{item.icon}</span>{item.label}
+                    </Link>
+                  ))}
+                </div>
+                {/* Group: PMS */}
+                <div className="flex items-center gap-1 rounded-xl px-1 py-1" style={{ background: "rgba(99,102,241,0.05)", border: "1px solid rgba(99,102,241,0.1)" }}>
+                  {adminNav.filter(i => i.group === "pms").map((item) => (
+                    <Link key={item.href} href={item.href}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-all ${
+                        pathname === item.href ? "bg-white/10 border border-white/15" : "text-white/55 hover:text-white hover:bg-white/6"
+                      }`}>
+                      <span>{item.icon}</span>{item.label}
+                    </Link>
+                  ))}
+                </div>
+                {/* Group: F&B */}
+                <div className="flex items-center gap-1 rounded-xl px-1 py-1" style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.1)" }}>
+                  {adminNav.filter(i => i.group === "fb").map((item) => (
+                    <Link key={item.href} href={item.href}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-all ${
+                        pathname === item.href ? "bg-white/10 border border-white/15" : "text-white/55 hover:text-white hover:bg-white/6"
+                      }`}>
+                      <span>{item.icon}</span>{item.label}
+                    </Link>
+                  ))}
+                </div>
+                {/* Group: Billing */}
+                <div className="flex items-center gap-1 rounded-xl px-1 py-1" style={{ background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.1)" }}>
+                  {adminNav.filter(i => i.group === "billing").map((item) => (
+                    <Link key={item.href} href={item.href}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-all ${
+                        pathname === item.href ? "bg-white/10 border border-white/15" : "text-white/55 hover:text-white hover:bg-white/6"
+                      }`}>
+                      <span>{item.icon}</span>{item.label}
+                    </Link>
+                  ))}
+                </div>
+              </>
+            ) : (
+              nav.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link key={item.href} href={item.href}
+                    className={`px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition-all ${
+                      isActive ? "bg-white/10 border border-white/15" : "text-white/60 hover:text-white hover:bg-white/6"
+                    }`}>
+                    <span className="text-base">{item.icon}</span>{item.label}
+                  </Link>
+                );
+              })
+            )}
           </nav>
 
           {/* Actions */}
@@ -98,13 +153,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         {/* Mobile nav */}
         <div className="md:hidden border-t border-white/8 px-4 py-2 flex gap-1 overflow-x-auto">
-          {nav.map((item) => {
+          {(user?.role === "guest" ? guestNav : adminNav).map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 whitespace-nowrap transition ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 whitespace-nowrap transition ${
                   isActive ? "bg-white/10 border border-white/15" : "text-white/60"
                 }`}
               >

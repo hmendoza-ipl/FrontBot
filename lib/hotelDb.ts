@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 const now = () => new Date().toISOString();
 const addDays = (d: number) => new Date(Date.now() + d * 86400000).toISOString();
 
-export type RoomStatus = "available" | "occupied" | "maintenance" | "dirty";
+export type RoomStatus = "available" | "occupied" | "maintenance" | "dirty" | "cleaning";
 export type ReservationStatus = "booked" | "checked_in" | "checked_out" | "cancelled" | "no_show";
 export type PaymentMethod = "transfer" | "card" | "cash";
 export type FolioItemType = "room" | "fb" | "minibar" | "laundry" | "spa" | "other";
@@ -107,6 +107,40 @@ const db = g.__frontbot_hotel_demo as {
   purchases: Purchase[]; invoices: Invoice[];
 };
 
+// --- Helpers para auto-asignación de habitación ---
+
+function overlaps(aStart: string, aEnd: string, bStart: string, bEnd: string) {
+  return new Date(aStart) < new Date(bEnd) && new Date(bStart) < new Date(aEnd);
+}
+
+function roomTypeById(typeId: string) {
+  return db.roomTypes.find((t) => t.id === typeId) || null;
+}
+
+function isRoomAvailableForDates(roomId: string, checkIn: string, checkOut: string) {
+  const active = db.reservations.filter(
+    (r) => r.roomId === roomId && ["booked", "checked_in"].includes(r.status)
+  );
+  for (const r of active) {
+    if (overlaps(checkIn, checkOut, r.checkIn, r.checkOut)) return false;
+  }
+  return true;
+}
+
+function autoAssignRoom(res: { roomId?: string; checkIn: string; checkOut: string; adults: number; children: number }) {
+  if (res.roomId) return res.roomId;
+  const pax = (res.adults || 0) + (res.children || 0);
+  const candidates = db.rooms.filter((room) => room.status === "available");
+  const good = candidates
+    .map((room) => ({ room, rt: roomTypeById(room.typeId) }))
+    .filter(({ rt }) => !rt || rt.capacity >= pax)
+    .map(({ room }) => room);
+  const finalList = (good.length ? good : candidates).filter((room) =>
+    isRoomAvailableForDates(room.id, res.checkIn, res.checkOut)
+  );
+  return finalList[0]?.id || undefined;
+}
+
 export function listRooms() { return { rooms: db.rooms, roomTypes: db.roomTypes }; }
 export function updateRoom(id: string, patch: Partial<Room>) {
   const r = db.rooms.find(x => x.id === id);
@@ -125,6 +159,10 @@ export function createReservation(input: Omit<Reservation, "id" | "createdAt" | 
     code: `FB-${Math.floor(1000 + Math.random() * 9000)}`,
     createdAt: now(), updatedAt: now(),
   };
+  // Auto-assign habitación si entra checked_in sin roomId
+  if (res.status === "checked_in" && !res.roomId) {
+    res.roomId = autoAssignRoom(res);
+  }
   db.reservations.push(res);
   if (res.roomId && res.status === "checked_in") {
     const room = db.rooms.find(r => r.id === res.roomId);
@@ -137,6 +175,10 @@ export function patchReservation(id: string, patch: Partial<Reservation>) {
   if (!r) return null;
   Object.assign(r, patch);
   r.updatedAt = now();
+  // Si se hace check-in y no hay habitación asignada, auto-asignar
+  if (patch.status === "checked_in" && !r.roomId) {
+    r.roomId = autoAssignRoom(r);
+  }
   if (patch.status === "checked_in" && r.roomId) {
     const room = db.rooms.find(x => x.id === r.roomId);
     if (room) room.status = "occupied";
@@ -221,3 +263,31 @@ export function createInvoiceFromReservation(reservationId: string) {
   return inv;
 }
 export function getInvoice(id: string) { return db.invoices.find(x => x.id === id) || null; }
+
+// --- Rooms & Room Types CRUD ---
+
+export function createRoomType(input: Omit<RoomType, "id">) {
+  const rt: RoomType = { ...input, id: randomUUID() };
+  db.roomTypes.push(rt);
+  return rt;
+}
+
+export function updateRoomType(id: string, patch: Partial<RoomType>) {
+  const rt = db.roomTypes.find((x) => x.id === id);
+  if (!rt) return null;
+  Object.assign(rt, patch);
+  return rt;
+}
+
+export function createRoom(input: Omit<Room, "id">) {
+  const room: Room = { ...input, id: randomUUID() };
+  db.rooms.push(room);
+  return room;
+}
+
+export function deleteRoom(id: string) {
+  const idx = db.rooms.findIndex((x) => x.id === id);
+  if (idx === -1) return false;
+  db.rooms.splice(idx, 1);
+  return true;
+}
