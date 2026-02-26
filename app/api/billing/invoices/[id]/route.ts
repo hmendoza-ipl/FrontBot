@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { getInvoice, listFolio, getReservation } from "@/lib/hotelDb";
 
 export async function GET(_: Request, { params }: { params: { id: string } }) {
-  const inv = getInvoice(params.id);
+  const inv = await getInvoice(params.id);
   if (!inv) return new NextResponse("Not found", { status: 404 });
 
-  const folio = listFolio(inv.reservationId);
-  const res = getReservation(inv.reservationId);
+  const [folio, res] = await Promise.all([
+    listFolio(inv.reservationId),
+    getReservation(inv.reservationId),
+  ]);
   const subtotal = folio.totalCharges / 1.16;
   const iva = folio.totalCharges - subtotal;
 
@@ -37,12 +39,9 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     .balance-row { display:flex; justify-content:space-between; margin-top:4px; font-size:14px; font-weight:700; color:#ef4444; }
     .footer { text-align:center; margin-top:24px; font-size:11px; color:#94a3b8; line-height:1.6; }
     .type-badge { display:inline-block; padding:2px 7px; border-radius:99px; font-size:10px; font-weight:600; }
-    .type-room { background:#eff6ff; color:#3b82f6; }
-    .type-fb { background:#fef9c3; color:#ca8a04; }
-    .type-minibar { background:#fdf2f8; color:#a21caf; }
-    .type-spa { background:#f0fdf4; color:#16a34a; }
-    .type-laundry { background:#f0f9ff; color:#0369a1; }
-    .type-other { background:#f8fafc; color:#64748b; }
+    .type-room { background:#eff6ff; color:#3b82f6; } .type-fb { background:#fef9c3; color:#ca8a04; }
+    .type-minibar { background:#fdf2f8; color:#a21caf; } .type-spa { background:#f0fdf4; color:#16a34a; }
+    .type-laundry { background:#f0f9ff; color:#0369a1; } .type-other { background:#f8fafc; color:#64748b; }
   </style>
 </head>
 <body>
@@ -53,7 +52,6 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
       <div class="badge">✓ FACTURA EMITIDA</div>
       <div style="margin-top:8px;font-size:20px;font-weight:800;color:#1e293b">${inv.number}</div>
     </div>
-
     <div class="meta">
       <div class="meta-item"><div class="meta-label">Reserva</div><div class="meta-value">${res?.code || inv.reservationId.slice(0,8)}</div></div>
       <div class="meta-item"><div class="meta-label">Huésped</div><div class="meta-value">${res?.guestName || "—"}</div></div>
@@ -62,21 +60,12 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
       <div class="meta-item"><div class="meta-label">Fecha factura</div><div class="meta-value">${new Date(inv.createdAt).toLocaleDateString('es-MX')}</div></div>
       <div class="meta-item"><div class="meta-label">Estado</div><div class="meta-value">${inv.status.toUpperCase()}</div></div>
     </div>
-
     <table>
       <thead><tr><th>Concepto</th><th>Tipo</th><th>Cant.</th><th>P/U</th><th>Total</th></tr></thead>
       <tbody>
-        ${folio.items.map(i => `
-        <tr>
-          <td>${i.description}</td>
-          <td><span class="type-badge type-${i.type}">${i.type}</span></td>
-          <td>${i.qty}</td>
-          <td>$${i.unitPrice.toFixed(2)}</td>
-          <td>$${(i.qty * i.unitPrice).toFixed(2)}</td>
-        </tr>`).join('')}
+        ${folio.items.map(i => `<tr><td>${i.description}</td><td><span class="type-badge type-${i.type}">${i.type}</span></td><td>${i.qty}</td><td>$${i.unitPrice.toFixed(2)}</td><td>$${(i.qty*i.unitPrice).toFixed(2)}</td></tr>`).join('')}
       </tbody>
     </table>
-
     <div class="totals">
       <div class="row"><span>Subtotal (sin IVA)</span><span>$${subtotal.toFixed(2)}</span></div>
       <div class="row"><span>IVA 16%</span><span>$${iva.toFixed(2)}</span></div>
@@ -84,11 +73,9 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
       <div class="paid-row"><span>Pagado</span><span>-$${folio.totalPaid.toFixed(2)}</span></div>
       ${folio.balance > 0 ? `<div class="balance-row"><span>Saldo pendiente</span><span>$${folio.balance.toFixed(2)}</span></div>` : `<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:13px;font-weight:700;color:#22c55e"><span>✓ Saldo liquidado</span><span>$0.00</span></div>`}
     </div>
-
     <div class="footer">
-      <p>Frontbot Hotel System · Demo v1.0 · Qubica.AI</p>
-      <p>Este documento es un comprobante demo.</p>
-      <p>En producción: CFDI real con firma digital del SAT.</p>
+      <p>Frontbot Hotel System · Qubica.AI</p>
+      <p>Este documento es un comprobante demo. En producción: CFDI con firma SAT.</p>
     </div>
   </div>
 </body>

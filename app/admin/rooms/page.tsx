@@ -2,13 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-// 1. CORRECCIÓN: Agregado "cleaning" al tipo
 type Room = {
   id: string;
   number: string;
   typeId: string;
   floor?: string;
-  status: "available" | "occupied" | "maintenance" | "dirty" | "cleaning";
+  status: "available" | "occupied" | "maintenance" | "dirty";
   notes?: string;
 };
 
@@ -66,12 +65,10 @@ export default function RoomsPage() {
     return rooms.filter(r => `${r.number} ${r.floor ?? ""} ${r.status}`.toLowerCase().includes(s));
   }, [rooms, q]);
 
-  // 2. CORRECCIÓN: Agregado el conteo para "cleaning" para coincidir con STATUS_CONFIG
   const stats = useMemo(() => ({
     available:   rooms.filter(r => r.status === "available").length,
     occupied:    rooms.filter(r => r.status === "occupied").length,
     dirty:       rooms.filter(r => r.status === "dirty").length,
-    cleaning:    rooms.filter(r => r.status === "cleaning").length,
     maintenance: rooms.filter(r => r.status === "maintenance").length,
   }), [rooms]);
 
@@ -169,7 +166,6 @@ export default function RoomsPage() {
           {(Object.entries(STATUS_CONFIG) as [keyof typeof STATUS_CONFIG, typeof STATUS_CONFIG[keyof typeof STATUS_CONFIG]][]).map(([key, sc]) => (
             <div key={key} className="rounded-2xl p-3.5 text-center"
               style={{ background: sc.bg, border: `1px solid ${sc.border}` }}>
-              {/* Ahora stats[key] es seguro porque key incluye 'cleaning' y stats también */}
               <div className="text-2xl font-extrabold" style={{ color: sc.color }}>{stats[key]}</div>
               <div className="text-[11px] text-white/50 mt-0.5">{sc.icon} {sc.label}</div>
             </div>

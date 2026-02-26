@@ -14,26 +14,23 @@ export async function POST(req: Request) {
   const webhook = process.env.N8N_AI_WEBHOOK_URL;
 
   if (!webhook) {
-    // Demo fallback without n8n
     const random = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-    addMessage(conversationId, "ai", random);
+    await addMessage(conversationId, "ai", random);
     return NextResponse.json({ ok: true, mode: "fallback" });
   }
 
-  const messages = listMessages(conversationId).slice(-30);
-  const payload = { hotelId, guestId, conversationId, messages };
-
+  const messages = (await listMessages(conversationId)).slice(-30);
   try {
     const r = await fetch(webhook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ hotelId, guestId, conversationId, messages }),
     });
     const data = await r.json().catch(() => ({}));
-    if (data?.reply) addMessage(conversationId, "ai", data.reply);
+    if (data?.reply) await addMessage(conversationId, "ai", data.reply);
     return NextResponse.json({ ok: true, data });
   } catch (err) {
-    addMessage(conversationId, "ai", "Lo siento, el asistente está temporalmente no disponible. Por favor contacta al front desk.");
+    await addMessage(conversationId, "ai", "Lo siento, el asistente está temporalmente no disponible. Por favor contacta al front desk.");
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
   }
 }

@@ -1,0 +1,276 @@
+// ─────────────────────────────────────────────────────────────
+// Frontbot Hotel — Prisma Schema
+// PostgreSQL · Node.js runtime
+// ─────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────
+
+enum RoomStatus {
+  available
+  occupied
+  maintenance
+  dirty
+  cleaning
+}
+
+enum ReservationStatus {
+  booked
+  checked_in
+  checked_out
+  cancelled
+  no_show
+}
+
+enum PaymentMethod {
+  transfer
+  card
+  cash
+}
+
+enum FolioItemType {
+  room
+  fb
+  minibar
+  laundry
+  spa
+  other
+}
+
+enum InventoryMoveType {
+  in
+  out
+  waste
+}
+
+enum PurchaseStatus {
+  draft
+  ordered
+  received
+  cancelled
+}
+
+enum InvoiceStatus {
+  draft
+  issued
+  void
+}
+
+enum TicketStatus {
+  new
+  assigned
+  in_progress
+  resolved
+  closed
+}
+
+enum TicketPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum MessageSender {
+  guest
+  ai
+  human
+}
+
+// ─── Hotel PMS ────────────────────────────────────────────────
+
+model RoomType {
+  id       String @id @default(uuid())
+  name     String
+  baseRate Float
+  capacity Int
+  rooms    Room[]
+}
+
+model Room {
+  id     String     @id @default(uuid())
+  number String     @unique
+  typeId String
+  floor  String?
+  status RoomStatus @default(available)
+  notes  String?
+
+  type         RoomType      @relation(fields: [typeId], references: [id])
+  reservations Reservation[]
+}
+
+model Guest {
+  id           String        @id @default(uuid())
+  fullName     String
+  email        String?
+  phone        String?
+  documentId   String?
+  reservations Reservation[]
+}
+
+model Reservation {
+  id          String            @id @default(uuid())
+  code        String            @unique
+  guestId     String
+  roomId      String?
+  status      ReservationStatus @default(booked)
+  checkIn     DateTime
+  checkOut    DateTime
+  adults      Int               @default(1)
+  children    Int               @default(0)
+  ratePerNight Float
+  guestName   String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  guest    Guest       @relation(fields: [guestId], references: [id])
+  room     Room?       @relation(fields: [roomId], references: [id])
+  folio    FolioItem[]
+  payments Payment[]
+  invoices Invoice[]
+}
+
+model FolioItem {
+  id            String        @id @default(uuid())
+  reservationId String
+  type          FolioItemType @default(other)
+  description   String
+  qty           Int           @default(1)
+  unitPrice     Float
+  createdAt     DateTime      @default(now())
+
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  reservationId String
+  amount        Float
+  method        PaymentMethod @default(cash)
+  reference     String?
+  createdAt     DateTime      @default(now())
+
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  reservationId String
+  number        String        @unique
+  status        InvoiceStatus @default(issued)
+  total         Float
+  createdAt     DateTime      @default(now())
+
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+}
+
+// ─── F&B ──────────────────────────────────────────────────────
+
+model Vendor {
+  id        String     @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  purchases Purchase[]
+}
+
+model FBItem {
+  id        String   @id @default(uuid())
+  sku       String   @unique
+  name      String
+  unit      String   // kg | lt | pcs
+  cost      Float
+  stock     Float    @default(0)
+  minStock  Float    @default(0)
+  moves     InventoryMove[]
+  purchaseLines PurchaseLine[]
+}
+
+model InventoryMove {
+  id        String            @id @default(uuid())
+  itemId    String
+  type      InventoryMoveType
+  qty       Float
+  reason    String
+  ref       String?
+  createdAt DateTime          @default(now())
+
+  item FBItem @relation(fields: [itemId], references: [id])
+}
+
+model Purchase {
+  id         String         @id @default(uuid())
+  vendorId   String
+  status     PurchaseStatus @default(draft)
+  createdAt  DateTime       @default(now())
+  receivedAt DateTime?
+
+  vendor Vendor         @relation(fields: [vendorId], references: [id])
+  lines  PurchaseLine[]
+}
+
+model PurchaseLine {
+  id         String @id @default(uuid())
+  purchaseId String
+  itemId     String
+  qty        Float
+  unitCost   Float
+
+  purchase Purchase @relation(fields: [purchaseId], references: [id])
+  item     FBItem   @relation(fields: [itemId], references: [id])
+}
+
+// ─── Concierge IA ─────────────────────────────────────────────
+
+model Area {
+  id         String   @id @default(uuid())
+  name       String
+  slaMinutes Int      @default(30)
+  email      String?
+  tickets    Ticket[]
+}
+
+model Ticket {
+  id          String         @id @default(uuid())
+  hotelId     String
+  guestId     String
+  areaId      String
+  title       String
+  description String?
+  status      TicketStatus   @default(new)
+  priority    TicketPriority @default(normal)
+  createdAt   DateTime       @default(now())
+  dueAt       DateTime
+
+  area Area @relation(fields: [areaId], references: [id])
+}
+
+model Conversation {
+  id            String    @id @default(uuid())
+  hotelId       String
+  guestId       String
+  aiEnabled     Boolean   @default(true)
+  humanTakeover Boolean   @default(false)
+  lastMessageAt DateTime  @default(now())
+  messages      Message[]
+
+  @@unique([hotelId, guestId])
+}
+
+model Message {
+  id             String        @id @default(uuid())
+  conversationId String
+  sender         MessageSender
+  content        String        @db.Text
+  createdAt      DateTime      @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+}
