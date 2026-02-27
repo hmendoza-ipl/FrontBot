@@ -93,8 +93,7 @@ async function autoAssignRoom(res: {
   const busyRoomIds = new Set(conflicting.map(r => r.roomId!));
 
   const candidates = await prisma.room.findMany({
-    where: { status: "available", id: { notIn: [...busyRoomIds] } },
-    include: { type: true },
+    where: { status: "available", id: { notIn: Array.from(busyRoomIds) } },    include: { type: true },
     orderBy: { number: "asc" },
   });
 
