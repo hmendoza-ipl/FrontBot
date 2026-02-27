@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+// 1. Corregido: Se añade "cleaning" al tipo Room
 type Room = {
   id: string;
   number: string;
   typeId: string;
   floor?: string;
-  status: "available" | "occupied" | "maintenance" | "dirty";
+  status: "available" | "occupied" | "maintenance" | "dirty" | "cleaning";
   notes?: string;
 };
 
@@ -65,10 +66,12 @@ export default function RoomsPage() {
     return rooms.filter(r => `${r.number} ${r.floor ?? ""} ${r.status}`.toLowerCase().includes(s));
   }, [rooms, q]);
 
+  // 2. Corregido: Se añade "cleaning" al objeto de estadísticas
   const stats = useMemo(() => ({
     available:   rooms.filter(r => r.status === "available").length,
     occupied:    rooms.filter(r => r.status === "occupied").length,
     dirty:       rooms.filter(r => r.status === "dirty").length,
+    cleaning:    rooms.filter(r => r.status === "cleaning").length,
     maintenance: rooms.filter(r => r.status === "maintenance").length,
   }), [rooms]);
 
@@ -162,7 +165,7 @@ export default function RoomsPage() {
         </div>
 
         {/* KPI badges */}
-        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="mt-5 grid grid-cols-2 sm:grid-cols-5 gap-3">
           {(Object.entries(STATUS_CONFIG) as [keyof typeof STATUS_CONFIG, typeof STATUS_CONFIG[keyof typeof STATUS_CONFIG]][]).map(([key, sc]) => (
             <div key={key} className="rounded-2xl p-3.5 text-center"
               style={{ background: sc.bg, border: `1px solid ${sc.border}` }}>
@@ -208,21 +211,6 @@ export default function RoomsPage() {
               Cancelar
             </button>
           </div>
-
-          {/* Tipos existentes */}
-          {types.length > 0 && (
-            <div className="pt-3 border-t border-white/8">
-              <div className="text-xs text-white/30 mb-2">Tipos actuales</div>
-              <div className="flex flex-wrap gap-2">
-                {types.map(t => (
-                  <span key={t.id} className="px-3 py-1.5 rounded-xl text-xs border"
-                    style={{ background: "rgba(99,102,241,0.1)", borderColor: "rgba(99,102,241,0.2)", color: "#A5B4FC" }}>
-                    {t.name} · ${t.baseRate}/n · {t.capacity}p
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -294,7 +282,6 @@ export default function RoomsPage() {
           return (
             <div key={room.id} className="rounded-[22px] border p-5 flex flex-col gap-3"
               style={{ background: sc.bg, borderColor: sc.border }}>
-              {/* Header */}
               <div className="flex items-start justify-between">
                 <div>
                   <div className="text-3xl font-extrabold leading-none">{room.number}</div>
@@ -314,7 +301,6 @@ export default function RoomsPage() {
                 </div>
               )}
 
-              {/* Status buttons */}
               <div className="grid grid-cols-2 gap-1.5 mt-auto">
                 {(Object.entries(STATUS_CONFIG) as [string, typeof STATUS_CONFIG[keyof typeof STATUS_CONFIG]][])
                   .filter(([k]) => k !== room.status)
